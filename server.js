@@ -64,9 +64,9 @@ app.post("/login", (req, res) => {
     }
 
     // Verificar las credenciales del usuario
-    const user = users.find(user=>user.username.toLowerCase()==username.toLowerCase());
-    if (user|| user.password!=password) {
-        return res.status(401).json({error:"Usuario o Contraseña incorrectos"});
+    const user = users.find(user => user.username === username && user.password === password);
+    if (!user) {
+        return res.status(401).json({ error: "Usuario o contraseña incorrectos" });
     }
 
     // Verificar sesión activa
