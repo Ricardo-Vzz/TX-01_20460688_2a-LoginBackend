@@ -1,5 +1,5 @@
 //en servidor backend se corre usando: node server.js o tambien nodemon server.js
-//en servidor frontend se corre usando: npm start o tambien npm run dev
+//en servidor frontend se corre usando: tambien npm run dev
 
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -103,30 +103,3 @@ function validarPassword(req, res, next) {
 
     return true;
 }
-
-//Hash a la contraseña
-function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    return { salt, hash };
-}
-
-//Hash al nombre de usuario
-function hashUsername(username) {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(username, salt, 1000, 64, 'sha512').toString('hex');
-    return { salt, hash };
-}
-
-//verificar la contraseña
-function verificarPassword(password, hash, salt) {
-    const hashVerificado = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    return hash === hashVerificado;
-}
-
-//verificar el nombre de usuario
-function verificarUsername(username, hash, salt) {
-    const hashVerificado = crypto.pbkdf2Sync(username, salt, 1000, 64, 'sha512').toString('hex');
-    return hash === hashVerificado;
-}
-
