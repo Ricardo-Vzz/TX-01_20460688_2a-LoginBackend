@@ -10,5 +10,5 @@ npm install
 
 ## Depuración
 ```sh
-npm run dev
+npm node server.js
 ```
