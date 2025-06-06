@@ -16,7 +16,7 @@ const SESSION_DURATION = 1000 * 60 * 60; // 1 hora de sesión
 const users = [
   {
     username: crypto.createHash("sha1").update("admin").digest("hex"),
-    password: hashPasswordSync("password123"),
+    password: hashPasswordSync("Password123"),
   },
 ]
 
@@ -127,7 +127,7 @@ app.get("/dashboard", (req, res) => {
   }
 
   // Renovar expiración
-  sessionData.expiresAt = Date.now() + SESSION_DURATION;
+  sessionData.expireAt = Date.now() + SESSION_DURATION;
   res.cookie("sesionID", sesionID, { ...secureCookieOptions(), maxAge: SESSION_DURATION });
 
   res.status(200).json({ username: sessionData.username, message: "Sesión válida" });
@@ -160,7 +160,7 @@ function hashUsername(username) {
 }
 
 //validar contraseña
-function validatePassword(password) {
+function validatePassword(password) {//la contraseña debe tener mínimo 8 caracteres, incluyendo mayúsculas, minúsculas, un número y un carácter especial.
   if (password.length < 8) return false
   if (!/[a-z]/.test(password)) return false
   if (!/[A-Z]/.test(password)) return false
