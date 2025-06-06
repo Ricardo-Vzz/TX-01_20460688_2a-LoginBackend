@@ -7,6 +7,7 @@ const csrf = require('csrf');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
 const cors = require('cors');
+const { json } = require('stream/consumers');
 
 dotenv.config();
 //El puerto de el backend es el 3001
@@ -69,8 +70,7 @@ app.post("/login", (req, res) => {
     csrfTokens.delete(csrfToken);
     
     if (!username || !password) {
-        res.writeHead(400)
-        res.end(JSON.stringify({ error: "Usuario y contraseña son requeridos" }))
+        res.status(400).json({ error: "Usuario y contraseña son requeridos" });
         return
     }
 
@@ -78,15 +78,11 @@ app.post("/login", (req, res) => {
     const user = users.find((u) => u.username === hashedUsername)
 
     if (!user) {
-        res.writeHead(401)
-        res.end(JSON.stringify({ error: "Datos incorrectos" }))
-        return
+        return res.status(401).json({ error: "Datos incorrectos" });
     }
 
     if (!verifyPassword(password, user.password)) {
-        res.writeHead(401)
-        res.end(JSON.stringify({ error: "Datos incorrectos" }))
-        return
+        return res.status(401).json({ error: "Datos incorrectos" });
     }
 
     const existingSession = Object.values(sesion).find(session => session.username === username);
@@ -104,41 +100,26 @@ app.post("/register", (req, res) => {
     const { username, password, confirmPassword, csrfToken } = req.body
     // Verificar token CSRF
       if (!verifyCSRFToken(csrfToken)) {
-        res.writeHead(403)
-        res.end(JSON.stringify({ error: "Token CSRF inválido" }))
-        return
+        return res.status(403).json({ error: "Token CSRF inválido" });
       }
 
       if (!username || !password || !confirmPassword) {
-        res.writeHead(400)
-        res.end(JSON.stringify({ error: "Todos los campos son requeridos" }))
-        return
+        return res.status(400).json({ error: "Todos los campos son requeridos" });
       }
 
       if (password !== confirmPassword) {
-        res.writeHead(400)
-        res.end(JSON.stringify({ error: "Las contraseñas no coinciden" }))
-        return
+        return res.status(400).json({ error: "Las contraseñas no coinciden" });
       }
 
       if (!validatePassword(password)) {
-        res.writeHead(400)
-        res.end(
-          JSON.stringify({
-            error:
-              "La contraseña debe tener mínimo 8 caracteres, incluyendo mayúsculas, minúsculas, un número y un carácter especial.",
-          }),
-        )
-        return
+        return res.status(400).json({error:"La contraseña debe tener mínimo 8 caracteres, incluyendo mayúsculas, minúsculas, un número y un carácter especial."});
       }
         // Verificar si el usuario ya existe
       const hashedUsername = hashUsername(username)
       const existingUser = users.find((u) => u.username === hashedUsername)
 
       if (existingUser) {
-        res.writeHead(400)
-        res.end(JSON.stringify({ error: "El usuario ya existe" }))
-        return
+        return res.status(400).json({ error: "El usuario ya existe" });
       }
 
       const hashedPassword = hashPasswordSync(password)
@@ -147,8 +128,7 @@ app.post("/register", (req, res) => {
         password: hashedPassword,
         createdAt: new Date(),
       })
-      res.writeHead(201)
-      res.end(JSON.stringify({ message: "Cuenta creada correctamente" }))
+      res.status(201).json({ message: "Cuenta creada correctamente" });
 });
 
 //ruta de sesión válida
