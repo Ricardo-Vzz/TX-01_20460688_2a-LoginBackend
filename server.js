@@ -60,24 +60,20 @@ app.get('/csrf-token', (req, res) => {
   const csrfToken = generateCSRFToken();
   res.json({ csrfToken });
 });
-// Ruta para registrar un nuevo usuario
 app.post("/login", (req, res) => {
   const { username, password, csrfToken } = req.body;
-  // Verificar el token CSRF
+  
     if (!csrfToken || !csrfTokens.has(csrfToken)) {
         return res.status(403).json({ error: "Invalid CSRF token" });
     }
-    // Invalida el token después de usarlo (single-use)
     csrfTokens.delete(csrfToken);
     
-    // Verificar campos requeridos
     if (!username || !password) {
         res.writeHead(400)
         res.end(JSON.stringify({ error: "Usuario y contraseña son requeridos" }))
         return
     }
 
-    // Hashear usuario y buscar
     const hashedUsername = hashUsername(username)
     const user = users.find((u) => u.username === hashedUsername)
 
@@ -87,27 +83,23 @@ app.post("/login", (req, res) => {
         return
     }
 
-    // Verificar contraseña
     if (!verifyPassword(password, user.password)) {
         res.writeHead(401)
         res.end(JSON.stringify({ error: "Datos incorrectos" }))
         return
     }
 
-    // Verificar sesión activa
     const existingSession = Object.values(sesion).find(session => session.username === username);
     if (existingSession) {
         return res.status(400).json({ error: "Ya tienes una sesión activa" });
     }
 
-    // Crear una sesión y devolver una cookie segura
     const sesionID = crypto.randomBytes(16).toString("base64url");
     sesion[sesionID] = { username };
     res.cookie("sesionID", sesionID, secureCookieOptions());
     res.status(200).json({ message: "Login successful" });
 });
 
-// Ruta para registrar un nuevo usuario
 app.post("/register", (req, res) => {
     const { username, password, confirmPassword, csrfToken } = req.body
     // Verificar token CSRF
@@ -116,19 +108,19 @@ app.post("/register", (req, res) => {
         res.end(JSON.stringify({ error: "Token CSRF inválido" }))
         return
       }
-      // Verificar campos requeridos
+
       if (!username || !password || !confirmPassword) {
         res.writeHead(400)
         res.end(JSON.stringify({ error: "Todos los campos son requeridos" }))
         return
       }
-      // Verificar que las contraseñas coincidan
+
       if (password !== confirmPassword) {
         res.writeHead(400)
         res.end(JSON.stringify({ error: "Las contraseñas no coinciden" }))
         return
       }
-      // Validar contraseña
+
       if (!validatePassword(password)) {
         res.writeHead(400)
         res.end(
@@ -139,8 +131,7 @@ app.post("/register", (req, res) => {
         )
         return
       }
-
-      // Hashear usuario y verificar si existe
+        // Verificar si el usuario ya existe
       const hashedUsername = hashUsername(username)
       const existingUser = users.find((u) => u.username === hashedUsername)
 
@@ -150,7 +141,6 @@ app.post("/register", (req, res) => {
         return
       }
 
-      // Crear nuevo usuario
       const hashedPassword = hashPasswordSync(password)
       users.push({
         username: hashedUsername,
@@ -161,7 +151,7 @@ app.post("/register", (req, res) => {
       res.end(JSON.stringify({ message: "Cuenta creada correctamente" }))
 });
 
-// Ruta protegida que solo responde si hay sesión válida
+//ruta de sesión válida
 app.get("/dashboard", (req, res) => {
   const sesionID = req.cookies.sesionID;
 
@@ -183,27 +173,21 @@ app.post("/logout", (req, res) => {
 });
 
 //FUNCIONES DE HASHING
-
-//hashear contraseña (crypto)
 function hashPasswordSync(password) {
   const salt = crypto.randomBytes(16).toString("hex")
   const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex")
   return `${salt}:${hash}`
 }
-
-// Función para verificar contraseña
 function verifyPassword(password, storedPassword) {
   const [salt, hash] = storedPassword.split(":")
   const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex")
   return hash === verifyHash
 }
-
-// Función para hashear usuario con SHA1
 function hashUsername(username) {
   return crypto.createHash("sha1").update(username.toLowerCase()).digest("hex")
 }
 
-// Función para validar contraseña
+//validar contraseña
 function validatePassword(password) {
   if (password.length < 8) return false
   if (!/[a-z]/.test(password)) return false
