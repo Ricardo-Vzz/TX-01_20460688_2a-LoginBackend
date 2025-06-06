@@ -8,11 +8,14 @@ const dotenv = require('dotenv');
 const crypto = require('crypto');
 const cors = require('cors');
 const { json } = require('stream/consumers');
+const { maxHeaderSize } = require('http');
 
 dotenv.config();
 //El puerto de el backend es el 3001
 const port = process.env.PORT || 3001;
 const SECRET_KEY = process.env.SECRET_KEY || 'secret';
+
+const SESSION_DURATION = 1000 * 60 * 60; // 1 hora de sesión
 
 const users = [
   {
@@ -90,9 +93,12 @@ app.post("/login", (req, res) => {
         return res.status(400).json({ error: "Ya tienes una sesión activa" });
     }
 
+
+
     const sesionID = crypto.randomBytes(16).toString("base64url");
-    sesion[sesionID] = { username };
-    res.cookie("sesionID", sesionID, secureCookieOptions());
+    const expireAt = Date.now() + SESSION_DURATION;
+    sesion[sesionID] = { username, expireAt };
+    res.cookie("sesionID", sesionID,{...SecureCookieOptions(), maxAge: SESSION_DURATION});
     res.status(200).json({ message: "Login successful" });
 });
 
@@ -139,7 +145,17 @@ app.get("/dashboard", (req, res) => {
     return res.status(401).json({ error: "No autorizado" });
   }
 
-  const { username } = sesion[sesionID];
+  const sessionData = sesion[sesionID];
+  if (Date.now() > sessionData.expiresAt) {
+    delete sesion[sesionID];
+    res.clearCookie("sesionID", secureCookieOptions());
+    return res.status(401).json({ error: "Sesión expirada" });
+  }
+
+  // Renovar expiración
+  sessionData.expiresAt = Date.now() + SESSION_DURATION;
+  res.cookie("sesionID", sesionID, { ...secureCookieOptions(), maxAge: SESSION_DURATION });
+
   res.status(200).json({ username });
 });
 
@@ -158,11 +174,13 @@ function hashPasswordSync(password) {
   const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex")
   return `${salt}:${hash}`
 }
+
 function verifyPassword(password, storedPassword) {
   const [salt, hash] = storedPassword.split(":")
   const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex")
   return hash === verifyHash
 }
+
 function hashUsername(username) {
   return crypto.createHash("sha1").update(username.toLowerCase()).digest("hex")
 }
