@@ -3,17 +3,13 @@
 
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const csrf = require('csrf');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
 const cors = require('cors');
-const { json } = require('stream/consumers');
-const { maxHeaderSize } = require('http');
 
 dotenv.config();
 //El puerto de el backend es el 3001
 const port = process.env.PORT || 3001;
-const SECRET_KEY = process.env.SECRET_KEY || 'secret';
 
 const SESSION_DURATION = 1000 * 60 * 60; // 1 hora de sesión
 
@@ -25,12 +21,11 @@ const users = [
 ]
 
 const sesion = {};
-const csrfTokens = new Set()
 
 const secureCookieOptions = ()=>({
     httpOnly: true,
     secure: false,
-    sameSite: "strict",
+    sameSite: "lax",
 });
 
 const app = express();
@@ -48,30 +43,13 @@ app.listen(port, () => {
     console.log(`Servidor corriendo en http://localhost:${port}`);
 });
 
-function generateCSRFToken() {
-  const token = crypto.randomBytes(32).toString("hex");
-  csrfTokens.add(token);
-  // Limpiar tokens viejos después de 1 hora
-  setTimeout(() => csrfTokens.delete(token), 3600000);
-  return token;
-}
-
 app.get('/', (req, res) => {
     res.send('Hola roño!');
 });
 
-app.get('/csrf-token', (req, res) => {
-  const csrfToken = generateCSRFToken();
-  res.json({ csrfToken });
-});
 app.post("/login", (req, res) => {
-  const { username, password, csrfToken } = req.body;
-  
-    if (!csrfToken || !csrfTokens.has(csrfToken)) {
-        return res.status(403).json({ error: "Invalid CSRF token" });
-    }
-    csrfTokens.delete(csrfToken);
-    
+  const { username, password } = req.body;
+
     if (!username || !password) {
         res.status(400).json({ error: "Usuario y contraseña son requeridos" });
         return
@@ -98,16 +76,12 @@ app.post("/login", (req, res) => {
     const sesionID = crypto.randomBytes(16).toString("base64url");
     const expireAt = Date.now() + SESSION_DURATION;
     sesion[sesionID] = { username, expireAt };
-    res.cookie("sesionID", sesionID,{...SecureCookieOptions(), maxAge: SESSION_DURATION});
+    res.cookie("sesionID", sesionID,{...secureCookieOptions(), maxAge: SESSION_DURATION});
     res.status(200).json({ message: "Login successful" });
 });
 
 app.post("/register", (req, res) => {
-    const { username, password, confirmPassword, csrfToken } = req.body
-    // Verificar token CSRF
-      if (!verifyCSRFToken(csrfToken)) {
-        return res.status(403).json({ error: "Token CSRF inválido" });
-      }
+    const { username, password, confirmPassword, } = req.body
 
       if (!username || !password || !confirmPassword) {
         return res.status(400).json({ error: "Todos los campos son requeridos" });
@@ -156,7 +130,7 @@ app.get("/dashboard", (req, res) => {
   sessionData.expiresAt = Date.now() + SESSION_DURATION;
   res.cookie("sesionID", sesionID, { ...secureCookieOptions(), maxAge: SESSION_DURATION });
 
-  res.status(200).json({ username });
+  res.status(200).json({ username: sessionData.username, message: "Sesión válida" });
 });
 
 app.post("/logout", (req, res) => {
